@@ -80,12 +80,20 @@ public class Book {
     @Transient
     @Override
     public boolean equals(Object obj) {
-        return this.id.equals(((Book) obj).getId()) && this.title.equals(((Book) obj).title) && this.author.equals(((Book) obj).author);
+        return this.id.equals(((Book) obj).getId())
+                && this.title.equals(((Book) obj).title)
+                && this.author.equals(((Book) obj).author);
     }
 
     @Transient
     @Override
     public int hashCode() {
         return 31 + this.id + this.title.hashCode() + this.author.hashCode();
+    }
+
+    @Transient
+    @Override
+    public String toString() {
+        return "\'" + this.title + "\' by " + this.author + ";";
     }
 }

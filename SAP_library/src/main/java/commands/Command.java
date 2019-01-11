@@ -1,12 +1,16 @@
 package commands;
 
+import db.BookRepository;
+import db.UserRepository;
 import utils.Writer;
 
-import javax.persistence.EntityManager;
 import java.io.BufferedReader;
 import java.io.IOException;
 
 public interface Command {
 
-    void execute(EntityManager entityManager, BufferedReader reader, Writer writer) throws IOException;
+    void execute(UserRepository userRepo,
+                 BookRepository bookRepo,
+                 BufferedReader reader,
+                 Writer writer) throws IOException;
 }

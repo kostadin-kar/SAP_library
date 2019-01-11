@@ -1,23 +1,37 @@
 package commands;
 
+import db.BookRepository;
+import db.UserRepository;
 import entities.Book;
 import utils.Writer;
 
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.List;
 
 public class CombinedSearchBookCommand implements Command {
-    private static final String THREE_PARAM_STRING_FORMAT_QUERY
-            = "SELECT b FROM Book AS b WHERE LOWER(b.title) LIKE :title AND LOWER(b.author) LIKE :author AND YEAR(b.releaseDate) LIKE :releaseYear  AND b.isAvailable = true";
+
+    private static final String EMPTY_STRING = "";
+    private static final CharSequence DELIMITER = " ";
+    private static final String AND_MESSAGE = " and ";
+    private static final String BOOK_TITLE_MESSAGE = "--\'%s\';";
+    private static final String BOOKS_FROM_MESSAGE = "-Books from %s%s%s:";
+    private static final String TITLE_SEARCH_MESSAGE = "-Title to search: ";
+    private static final String AUTHOR_SEARCH_MESSAGE = "-Author to search: ";
+    private static final String RELEASE_YEAR_SEARCH = "-Release year to search: ";
+    private static final String NO_BOOKS_AVAILABLE_MESSAGE = "-No such books available.";
+    private static final String BOOKS_IN_LIBRARY_MESSAGE = "-Books available in library:";
+    private static final String BOOK_AVAILABLE_MESSAGE = "-Book \'%s\' available at the library.";
+    private static final String YEAR_NOT_INCLUDE_MESSAGE = "-Year will not be included in search";
+    private static final String ENTER_BOOK_INFO_MESSAGE
+            = "-Enter info of book to search on (leave search field empty if you want to exclude it from search):";
 
     private String title;
     private String author;
     private Integer releaseYear;
 
-    public void execute(EntityManager entityManager,
+    public void execute(UserRepository userRepo,
+                        BookRepository bookRepo,
                         BufferedReader reader,
                         Writer writer) throws IOException {
 
@@ -26,85 +40,62 @@ public class CombinedSearchBookCommand implements Command {
         List<Book> booksByTitle = null;
         List<Book> books = null;
 
-        boolean isTitleEmpty = this.title.equals("");
-        boolean isAuthorEmpty = this.author.equals("");
+        boolean isTitleEmpty = this.title.equals(EMPTY_STRING);
+        boolean isAuthorEmpty = this.author.equals(EMPTY_STRING);
         boolean isReleaseDateEmpty = this.releaseYear == -1;
         if (!isTitleEmpty && !isAuthorEmpty && !isReleaseDateEmpty) {
-            Query query = entityManager
-                    .createQuery(THREE_PARAM_STRING_FORMAT_QUERY, Book.class);
-            query.setParameter("title", "%" + title + "%");
-            query.setParameter("author", "%" + author + "%");
-            query.setParameter("releaseYear", releaseYear);
-            booksByTitle = query.getResultList();
+            booksByTitle = bookRepo.selectBookByAllFieldsAvailable(title, author, releaseYear);
+
         } else if (!isAuthorEmpty && !isReleaseDateEmpty) {
-            Query query = entityManager
-                    .createQuery("SELECT b FROM Book AS b WHERE LOWER(b.author) LIKE :param1_1 AND YEAR(b.releaseDate) LIKE :param2_2  AND b.isAvailable = true", Book.class);
-            query.setParameter("param1_1", "%" + author + "%");
-            query.setParameter("param2_2", releaseYear);
-            books = query.getResultList();
+            books = bookRepo.selectBookByAuthorAndYearAvailable(author, releaseYear);
+
         } else if (!isTitleEmpty && !isAuthorEmpty) {
-            Query titleQuery = entityManager
-                    .createQuery("SELECT b FROM Book AS b WHERE LOWER(b.title) LIKE :param_0 AND b.isAvailable = true", Book.class);
-            titleQuery.setParameter("param_0", "%" + title + "%");
-            Query authorQuery = entityManager
-                    .createQuery("SELECT b FROM Book AS b WHERE LOWER(b.author) LIKE :param_0 AND b.isAvailable = true", Book.class);
-            authorQuery.setParameter("param_0", "%" + author + "%");
-            booksByTitle = titleQuery.getResultList();
-            books = authorQuery.getResultList();
+            booksByTitle = bookRepo.selectBookByTitleAvailable(title);
+            books = bookRepo.selectBookByAuthorAvailable(author);
+
         } else if (!isTitleEmpty && !isReleaseDateEmpty) {
-            Query titleQuery = entityManager
-                    .createQuery("SELECT b FROM Book AS b WHERE LOWER(b.title) LIKE :param_0 AND b.isAvailable = true", Book.class);
-            titleQuery.setParameter("param_0", "%" + title + "%");
-            Query releaseDateQuery = entityManager
-                    .createQuery("SELECT b FROM Book AS b WHERE YEAR(b.releaseDate) LIKE :param_0 AND b.isAvailable = true", Book.class);
-            releaseDateQuery.setParameter("param_0", releaseYear);
-            booksByTitle = titleQuery.getResultList();
-            books = releaseDateQuery.getResultList();
+            booksByTitle = bookRepo.selectBookByTitleAvailable(title);
+            books = bookRepo.selectBookByDateAvailable(releaseYear);
+
         } else if (!isReleaseDateEmpty) {
-            Query releaseDateQuery = entityManager
-                    .createQuery("SELECT b FROM Book AS b WHERE YEAR(b.releaseDate) LIKE :param_0 AND b.isAvailable = true", Book.class);
-            releaseDateQuery.setParameter("param_0", releaseYear);
-            books = releaseDateQuery.getResultList();
+            books = bookRepo.selectBookByDateAvailable(releaseYear);
+
         } else if (!isAuthorEmpty) {
-            Query authorQuery = entityManager
-                    .createQuery("SELECT b FROM Book AS b WHERE LOWER(b.author) LIKE :param_0 AND b.isAvailable = true", Book.class);
-            authorQuery.setParameter("param_0", "%" + author + "%");
-            books = authorQuery.getResultList();
+            books = bookRepo.selectBookByAuthorAvailable(author);
+
         } else if (!isTitleEmpty) {
-            Query titleQuery = entityManager
-                    .createQuery("SELECT b FROM Book AS b WHERE LOWER(b.title) LIKE :param_0 AND b.isAvailable = true", Book.class);
-            titleQuery.setParameter("param_0", "%" + title + "%");
-            booksByTitle = titleQuery.getResultList();
+            booksByTitle = bookRepo.selectBookByTitleAvailable(title);
+
         } else {
-            Query query = entityManager.createQuery("SELECT b FROM Book AS b WHERE b.isAvailable = true ORDER BY b.title");
-            books = query.getResultList();
+            books = bookRepo.selectAvailableBooks();
+
         }
 
         if ((booksByTitle != null && booksByTitle.isEmpty()) || (books != null && books.isEmpty())) {
-            writer.println("---No such books available.");
+            writer.println(NO_BOOKS_AVAILABLE_MESSAGE);
             return;
         }
         if (booksByTitle != null) {
-            writer.println("---Book \'" + booksByTitle.get(0).getTitle() + "\' available at the library.");
+            writer.println(String.format(BOOK_AVAILABLE_MESSAGE, booksByTitle.get(0).getTitle()));
         }
         if (books != null) {
-            String authorBooks = (!this.author.equals("")) ? books.get(0).getAuthor() : "";
+            String authorBooks = (!this.author.equals(EMPTY_STRING)) ? books.get(0).getAuthor() : EMPTY_STRING;
             String releaseDateBooks =
-                    (this.releaseYear != -1) ? this.releaseYear.toString() : "";
+                    (this.releaseYear != -1) ? this.releaseYear.toString() : EMPTY_STRING;
 
-            if (!authorBooks.equals("") || !releaseDateBooks.equals("")) {
-                String message = String.format("---Books from %s%s%s:",
+            if (!authorBooks.equals(EMPTY_STRING) || !releaseDateBooks.equals(EMPTY_STRING)) {
+                String message = String.format(BOOKS_FROM_MESSAGE,
                         authorBooks,
-                        (!authorBooks.equals("") && !releaseDateBooks.equals("")) ? " and " : "",
+                        (!authorBooks.equals(EMPTY_STRING) && !releaseDateBooks.equals(EMPTY_STRING)) ? AND_MESSAGE : EMPTY_STRING,
                         releaseDateBooks);
                 writer.println(message);
             } else {
-                writer.println("---Books in library:");
+                writer.println(BOOKS_IN_LIBRARY_MESSAGE);
             }
 
             for (Book book : books) {
                 if (book.getIsAvailable()) {
-                    writer.println("--\'" + book.getTitle() + "\';");
+                    writer.println(String.format(BOOK_TITLE_MESSAGE, book.getTitle()));
                 }
             }
         }
@@ -112,18 +103,18 @@ public class CombinedSearchBookCommand implements Command {
     }
 
     private void initializeBookTokens(BufferedReader reader, Writer writer) throws IOException {
-        writer.println("--Enter info of book to search on (leave search field empty if you want to exclude it from search):");
-        writer.print("----Title to search: ");
-        this.title = String.join(" ", reader.readLine().trim().toLowerCase().split("\\s+"));
-        writer.print("----Author to search: ");
-        this.author = String.join(" ", reader.readLine().trim().toLowerCase().split("\\s+"));
-        writer.print("----Release year to search: ");
+        writer.println(ENTER_BOOK_INFO_MESSAGE);
+        writer.print(TITLE_SEARCH_MESSAGE);
+        this.title = String.join(DELIMITER, reader.readLine().trim().toLowerCase().split("\\s+"));
+        writer.print(AUTHOR_SEARCH_MESSAGE);
+        this.author = String.join(DELIMITER, reader.readLine().trim().toLowerCase().split("\\s+"));
+        writer.print(RELEASE_YEAR_SEARCH);
 
         try {
             this.releaseYear = Integer.parseInt(reader.readLine().trim());
 
         } catch (NumberFormatException nfe) {
-            writer.println("Year will not be included in search");
+            writer.println(YEAR_NOT_INCLUDE_MESSAGE);
             this.releaseYear = -1;
         }
     }

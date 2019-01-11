@@ -1,11 +1,12 @@
 package engine;
 
 import commands.*;
+import db.BookRepository;
+import db.UserRepository;
 import entities.User;
 import enums.Commands;
 import utils.Writer;
 
-import javax.persistence.EntityManager;
 import java.io.BufferedReader;
 import java.io.IOException;
 
@@ -15,21 +16,18 @@ public class LibraryEngine implements Runnable {
 
     private final BufferedReader reader;
     private final Writer writer;
-    private final EntityManager entityManager;
+    private final BookRepository bookRepo;
+    private final UserRepository userRepo;
 
-    public LibraryEngine(BufferedReader reader, Writer writer, EntityManager em) {
+    public LibraryEngine(BufferedReader reader, Writer writer, BookRepository bookRepo, UserRepository userRepo) {
         this.reader = reader;
         this.writer = writer;
-        this.entityManager = em;
+        this.bookRepo = bookRepo;
+        this.userRepo = userRepo;
     }
 
     public void run() {
-        try {
-            printHelpMenu();
-        } catch (IOException e) {
-            System.err.println("IOException while printing menu occurred. Exiting...");
-            return;
-        }
+        printHelpMenu();
         String commandLineArgs;
         Command command = null;
         while (true) {
@@ -76,11 +74,11 @@ public class LibraryEngine implements Runnable {
                     case ADD_BOOK:
                         command = new AddBookToLibraryCommand();
                         break;
-                    case DELETE_BOOK:
-                        command = new DeleteBookFromLibraryCommand();
+                    case REMOVE_BOOK:
+                        command = new RemoveBookFromLibraryCommand();
                         break;
-                    case FETCH_BOOK:
-                        command = new UserFetchBookCommand();
+                    case GET_BOOK:
+                        command = new UserGetBookCommand();
                         break;
                     case RETURN_BOOK:
                         command = new UserReturnBookCommand();
@@ -100,14 +98,20 @@ public class LibraryEngine implements Runnable {
                     case ALERT_USER:
                         command = new AlertUserDeadlineCommand();
                         break;
+                    case MY_BOOKS:
+                        command = new ListMyBooks();
+                        break;
+                    case HELP_MENU:
+                        printHelpMenu();
+                        continue;
                     default:
                         writer.println("Invalid command.");
+                        continue;
                 }
 
                 if (command != null) {
-                    command.execute(this.entityManager, this.reader, this.writer);
+                    command.execute(this.userRepo, this.bookRepo, this.reader, this.writer);
                 }
-                command = null;
 
             } catch (IOException e) {
                 e.printStackTrace();
@@ -115,7 +119,7 @@ public class LibraryEngine implements Runnable {
         }
     }
 
-    private void printHelpMenu() throws IOException {
+    private void printHelpMenu() {
         StringBuilder builder = new StringBuilder();
         builder.append("+------------------+").append(System.lineSeparator())
                 .append("|   Help manual    |").append(System.lineSeparator())
@@ -127,14 +131,16 @@ public class LibraryEngine implements Runnable {
                 .append("| log in;          |").append(System.lineSeparator())
                 .append("| log out;         |").append(System.lineSeparator())
                 .append("| add book;        |").append(System.lineSeparator())
-                .append("| delete book;     |").append(System.lineSeparator())
-                .append("| fetch book;      |").append(System.lineSeparator())
+                .append("| remove book;     |").append(System.lineSeparator())
+                .append("| get book;        |").append(System.lineSeparator())
                 .append("| return book;     |").append(System.lineSeparator())
                 .append("| search title;    |").append(System.lineSeparator())
                 .append("| combined search; |").append(System.lineSeparator())
                 .append("| check book;      |").append(System.lineSeparator())
                 .append("| list users;      |").append(System.lineSeparator())
                 .append("| alert user;      |").append(System.lineSeparator())
+                .append("| my books;        |").append(System.lineSeparator())
+                .append("| help menu        |").append(System.lineSeparator())
                 .append("+------------------+").append(System.lineSeparator());
 
         this.writer.println(builder.toString());

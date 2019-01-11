@@ -10,15 +10,17 @@ public class User {
     private String username;
     private String password;
     private List<Book> books;
+    private Boolean isRoleAdmin;
 
     public User() {
-        this(null, null);
+
     }
 
     public User(String username, String password) {
         this.username = username;
         this.password = password;
         this.books = new ArrayList<>();
+        this.isRoleAdmin = false;
     }
 
     @Id
@@ -56,5 +58,14 @@ public class User {
 
     public void setBooks(List<Book> books) {
         this.books = books;
+    }
+
+    @Column(name = "is_role_admin")
+    public Boolean getIsRoleAdmin() {
+        return isRoleAdmin;
+    }
+
+    public void setIsRoleAdmin(Boolean roleAdmin) {
+        isRoleAdmin = roleAdmin;
     }
 }

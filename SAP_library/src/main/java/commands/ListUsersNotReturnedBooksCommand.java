@@ -1,35 +1,34 @@
 package commands;
 
+import db.BookRepository;
+import db.UserRepository;
 import entities.User;
 import utils.Writer;
 
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.util.List;
 
 public class ListUsersNotReturnedBooksCommand implements Command {
 
-    public void execute(EntityManager entityManager,
+    private static final String LISTING_USERS_MESSAGE = "-Listing users:";
+    private static final String NOT_ALL_BOOKS_RETURNED_MESSAGE = "-User \'%s\' has not returned all books.";
+    private static final String ALL_BOOKS_ARE_RETURNED_MESSAGE = "-All books are returned and are available.";
+
+    public void execute(UserRepository userRepo,
+                        BookRepository bookRepo,
                         BufferedReader reader,
-                        Writer writer) throws IOException {
+                        Writer writer) {
 
+        List<User> users = userRepo.selectUsers();
 
-        Query userQuery = entityManager
-                .createQuery("SELECT u FROM User AS u", User.class);
-        List<User> users = userQuery.getResultList();
-
-        writer.println("--Listing users:");
+        writer.println(LISTING_USERS_MESSAGE);
         StringBuilder builder = new StringBuilder();
         for (User user : users) {
             if (user.getBooks().size() > 0) {
-                builder.append("--User \'")
-                        .append(user.getUsername())
-                        .append("\' has not returned all books.")
+                builder.append(String.format(NOT_ALL_BOOKS_RETURNED_MESSAGE, user.getUsername()))
                         .append(System.lineSeparator());
             }
         }
-        writer.print((builder.length() > 0) ? builder.toString() : "-All books are returned and are available.");
+        writer.print((builder.length() > 0) ? builder.toString() : ALL_BOOKS_ARE_RETURNED_MESSAGE + System.lineSeparator());
     }
 }

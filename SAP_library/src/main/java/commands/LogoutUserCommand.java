@@ -1,24 +1,28 @@
 package commands;
 
+import db.BookRepository;
+import db.UserRepository;
 import engine.LibraryEngine;
 import utils.Writer;
 
-import javax.persistence.EntityManager;
 import java.io.BufferedReader;
-import java.io.IOException;
 
 public class LogoutUserCommand implements Command {
 
-    public void execute(EntityManager entityManager,
+    private static final String USER_LOGGED_OUT_MESSAGE = "-User %s logged out.";
+    private static final String NO_USER_LOGGED_IN_MESSAGE = "-No user is logged in.";
+
+    public void execute(UserRepository userRepo,
+                        BookRepository bookRepo,
                         BufferedReader reader,
-                        Writer writer) throws IOException {
+                        Writer writer) {
 
         if (LibraryEngine.loggedInUser == null) {
-            writer.println("No user is logged in.");
+            writer.println(NO_USER_LOGGED_IN_MESSAGE);
             return;
         }
 
-        writer.println("User " + LibraryEngine.loggedInUser.getUsername() + " logged out.");
+        writer.println(String.format(USER_LOGGED_OUT_MESSAGE, LibraryEngine.loggedInUser.getUsername()));
         LibraryEngine.loggedInUser = null;
     }
 }

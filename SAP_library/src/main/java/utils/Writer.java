@@ -9,13 +9,11 @@ public class Writer {
         this.writer = writer;
     }
 
-    public void println(String message) throws IOException {
+    public void println(String message) {
         writer.println(message);
-//        writer.write(message + System.lineSeparator());
     }
 
-    public void print(String message) throws IOException {
+    public void print(String message) {
         writer.print(message);
-//        writer.write(message);
     }
 }

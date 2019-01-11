@@ -1,91 +1,44 @@
 package commands;
 
+import db.BookRepository;
+import db.UserRepository;
 import entities.Book;
-import entities.User;
 import utils.Writer;
 
-import javax.persistence.EntityManager;
-import javax.persistence.Query;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class SearchBookByTitleCommand implements Command {
 
-    public void execute(EntityManager entityManager,
+    private static final String DELIMITER = " ";
+    private static final String SEARCH_FOR_TITLE_MESSAGE = "--Enter title to search: ";
+    private static final String NO_BOOK_WITH_SUCH_TITLE_MESSAGE = "-No book in library contains such title.";
+    private static final String BOOK_WITH_ID_AND_TITLE_AVAILABLE_MESSAGE
+            = "-Book \'%s\' with id = %d is available at library.";
+
+    public void execute(UserRepository userRepo,
+                        BookRepository bookRepo,
                         BufferedReader reader,
                         Writer writer) throws IOException {
 
-        writer.print("--Enter title to search: ");
+        writer.print(SEARCH_FOR_TITLE_MESSAGE);
         String[] titleTokens = reader.readLine().trim().toLowerCase().split("\\s+");
-        String title = String.join(" ", titleTokens);
+        String title = String.join(DELIMITER, titleTokens).trim();
 
-        Query query = entityManager
-                .createQuery("SELECT b FROM Book AS b WHERE LOWER(b.title) LIKE :title AND b.isAvailable = true", Book.class);
-        query.setParameter("title", "%" + title.trim() + "%");
-        List<Book> books = query.getResultList();
+        List<Book> books = bookRepo.selectBookByTitleAvailable(title);
 
         if (books.isEmpty()) {
-            writer.println("No book in library contains such title.");
+            writer.println(NO_BOOK_WITH_SUCH_TITLE_MESSAGE);
         } else {
-//            books = books.stream().filter(Book::getIsAvailable).collect(Collectors.toList());
 
             StringBuilder builder = new StringBuilder();
             for (Book book : books) {
-                builder.append("Book \'")
-                        .append(book.getTitle())
-                        .append("\' with id = ")
-                        .append(book.getId())
-                        .append(" is available at library.")
+                builder.append(String.format(BOOK_WITH_ID_AND_TITLE_AVAILABLE_MESSAGE, book.getTitle(), book.getId()))
                         .append(System.lineSeparator());
             }
             writer.print(builder.toString());
         }
-
-//        writer.print("--Check if book is fetched by users? (y/n): ");
-//        while (true) {
-//            String answer = reader.readLine().toLowerCase();
-//            if (answer.equals("y")) {
-//                Query userQuery = entityManager
-//                        .createQuery("SELECT u FROM User AS u", User.class);
-//                List<User> users = userQuery.getResultList();
-//
-//                StringBuilder builder = new StringBuilder();
-//                if (!users.isEmpty()) {
-//                    for (User user : users) {
-//                        List<Book> userBooks = user.getBooks().stream()
-//                                .filter(b -> b.getTitle().toLowerCase().contains(title))
-//                                .collect(Collectors.toList());
-//
-//                        if (!userBooks.isEmpty()) {
-//                            for (Book userBook : userBooks) {
-//                                builder.append("--User \'")
-//                                        .append(user.getUsername())
-//                                        .append("\' has \'")
-//                                        .append(userBook.getTitle())
-//                                        .append("\' in their inventory.")
-//                                        .append(System.lineSeparator());
-//                            }
-//                        }
-//                    }
-//                    if (builder.length() > 0) {
-//                        writer.println("Users who have a book containing \'" + title + "\':");
-//                        writer.print(builder.toString());
-//                    } else {
-//                        writer.println("No users contain book in their inventory.");
-//                    }
-//                } else {
-//                    writer.println("No available users to ask.");
-//                }
-//                break;
-//            } else if (answer.equals("n")) {
-//                writer.println("Librarian changed their mind, they will not be asking users.");
-//                break;
-//            } else {
-//                writer.println("Please enter a valid response.");
-//            }
-//        }
 
     }
 }
